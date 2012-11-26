@@ -1,0 +1,179 @@
+#!/usr/bin/env python
+
+import os
+import glob
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import pygeo.fastio as fastio
+import pygeo.segyread as segyread
+# import rsf.input
+
+# ------------------------------------------------------------------------
+# Settings
+
+AUTHORSHIP = 'Brendan Smithyman, November 2012'
+VERSION = '%prog v1.0\n'
+DESCRIPTION = '''
+General-purpose plotting program for seismic images.
+'''
+
+defaulttype = '.sgy'
+
+# ------------------------------------------------------------------------
+# Functions
+
+def read_su (infile):
+  sf = segyread.SEGYFile(infile, isSU=True)
+  return sf[:]
+
+def read_sgy (infile):
+  sf = segyread.SEGYFile(infile)
+  return sf[:]
+
+def read_rsf (infile):
+  return None
+
+
+read_mapping = {
+	'.su': read_su,
+	'.rsf': read_rsf,
+	'.sgy': read_sgy,
+}
+
+defaultfile = '.plotdefaults'
+
+# ------------------------------------------------------------------------
+# Parameter parsing
+
+from optparse import OptionParser
+
+usage = '%prog [options] [projectname]'
+
+parser = OptionParser(usage       = usage,
+                      version     = VERSION,
+                      description = DESCRIPTION)
+
+parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
+		help='display additional information')
+
+parser.add_option('-r', '--ratio', action='store', dest='ratio',
+		help='set aspect ratio [%default]')
+
+parser.add_option('-m', '--cmap', action='store', dest='cmap',
+		help='choose colour scale [%default]')
+
+parser.add_option('-c', '--clip', action='store', dest='clip',
+		help='set minimum/maximum values for plot')
+
+parser.add_option('-e', '--extent', action='store', dest='extent',
+		help='set plot axes ranges')
+
+parser.add_option('-b', '--bar', action='store', dest='bar',
+		help='type of colour bar [%default]')
+
+parser.add_option('-f', '--fontsize', action='store', dest='fontsize',
+		help='font size for labels [%default]')
+
+parser.add_option('-x', '--xlabel', action='store', dest='xlabel',
+		help='label for x axis [\'%default\']')
+
+parser.add_option('-z', '--zlabel', action='store', dest='zlabel',
+		help='label for z axis [\'%default\']')
+
+parser.add_option('-k', '--cblabel', action='store', dest='cblabel',
+		help='label for colour bar [\'%default\']')
+
+parser.add_option('-t', '--title', action='store', dest='title',
+		help='title for plot [\'%default\']')
+
+if (os.path.isfile(defaultfile)):
+  parser.error('Defaults file is not yet implemented!')
+  #parser.set_defaults ( 
+
+else:
+  parser.set_defaults(
+			verbose		= False,
+			ratio		= 'auto',
+			cmap		= 'jet',
+			clip		= None,
+			extent		= None,
+			bar		= 'vertical',
+			fontsize	= matplotlib.rcParams['font.size'],
+			xlabel		= '',
+			zlabel		= '',
+			cblabel		= '',
+  )
+
+(options, args) = parser.parse_args()
+
+if (len(args) == 0):
+  parser.error('Please specify an input filename!')
+
+infile = args[0]
+
+if (not os.path.isfile(infile)):
+  parser.error('File \'%s\' does not exist!'%(infile,))
+
+extension = os.path.splitext(infile)[1]
+
+try:
+  im = read_mapping[extension](infile)
+except KeyError:
+  im = read_mapping[defaulttype](infile)
+
+try:
+  comap = cm.__dict__[options.cmap]
+except KeyError:
+  parser.errro('Colour map \'%s\' does not exist!'%(options.cmap,))
+
+if (options.clip is None):
+  clipmin = im.min()
+  clipmax = im.max()
+
+elif (unicode(options.clip).isnumeric()):
+  clipmin = -float(options.clip)
+  clipmax = float(options.clip)
+
+else:
+  clipopts = options.clip.split(',')
+  clipmin = float(clipopts[0])
+  clipmax = float(clipopts[1])
+
+if (options.extent is None):
+  axisext = [-0.5, im.shape[0] - 0.5, im.shape[1] - 0.5, -0.5]
+else:
+  axisext = [float(item) for item in options.extent.split(',')]
+
+if (options.bar in ['vertical','horizontal']):
+  plotbar = True
+  barori = options.bar
+
+elif (options.bar.lower() in ['h','v']):
+  plotbar = True
+  if (options.bar.lower() == 'h'):
+    barori = 'horizontal'
+  else:
+    barori = 'vertical'
+    
+else:
+  plotbar = False
+
+if (unicode(options.fontsize).isnumeric()):
+  matplotlib.rcParams.update({'font.size': int(options.fontsize)})
+
+fig = plt.figure()
+
+plt.imshow(im.T, aspect=options.ratio, cmap=comap, vmin=clipmin, vmax=clipmax, extent=axisext)
+
+plt.xlabel(options.xlabel)
+plt.ylabel(options.zlabel)
+plt.title(options.title)
+
+if (plotbar):
+  cb = plt.colorbar(orientation=barori)
+  cb.set_label(options.cblabel)
+
+plt.show()
+
