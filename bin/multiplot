@@ -126,18 +126,21 @@ try:
 except KeyError:
   parser.errro('Colour map \'%s\' does not exist!'%(options.cmap,))
 
+print options.clip
+
+print unicode(options.clip).isnumeric()
 if (options.clip is None):
   clipmin = im.min()
   clipmax = im.max()
 
-elif (unicode(options.clip).isnumeric()):
-  clipmin = -float(options.clip)
-  clipmax = float(options.clip)
-
 else:
   clipopts = options.clip.split(',')
-  clipmin = float(clipopts[0])
-  clipmax = float(clipopts[1])
+  if (len(clipopts) == 2):
+    clipmin = float(clipopts[0])
+    clipmax = float(clipopts[1])
+  else:
+    clipmax = float(clipopts[0])
+    clipmin = -clipmax
 
 if (options.extent is None):
   axisext = [-0.5, im.shape[0] - 0.5, im.shape[1] - 0.5, -0.5]
