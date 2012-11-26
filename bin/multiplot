@@ -20,6 +20,21 @@ General-purpose plotting program for seismic images.
 defaulttype = '.sgy'
 defaultfile = '.plotdefaults'
 
+# Option defaults
+optdefaults = {
+			'verbose':	 False,
+			'ratio':	 'auto',
+			'cmap': 	'jet',
+			'clip': 	None,
+			'extent': 	None,
+			'bar': 		'vertical',
+			'fontsize': 	matplotlib.rcParams['font.size'],
+			'xlabel': 	'',
+			'zlabel': 	'',
+			'cblabel': 	'',
+			'title': 	'',
+}
+
 # ------------------------------------------------------------------------
 # Functions
 
@@ -86,23 +101,12 @@ parser.add_option('-t', '--title', action='store', dest='title',
 		help='title for plot [\'%default\']')
 
 if (os.path.isfile(defaultfile)):
-  parser.error('Defaults file is not yet implemented!')
-  #parser.set_defaults ( 
+  with open(defaultfile, 'r') as fp:
+    optdict = dict(line.strip().split(None, 1) for line in fp if len(line.strip().split()) == 2)
 
-else:
-  parser.set_defaults(
-			verbose		= False,
-			ratio		= 'auto',
-			cmap		= 'jet',
-			clip		= None,
-			extent		= None,
-			bar		= 'vertical',
-			fontsize	= matplotlib.rcParams['font.size'],
-			xlabel		= '',
-			zlabel		= '',
-			cblabel		= '',
-			title		= '',
-  )
+  optdefaults.update(optdict)
+
+parser.set_defaults(**optdefaults)
 
 (options, args) = parser.parse_args()
 
@@ -126,9 +130,6 @@ try:
 except KeyError:
   parser.errro('Colour map \'%s\' does not exist!'%(options.cmap,))
 
-print options.clip
-
-print unicode(options.clip).isnumeric()
 if (options.clip is None):
   clipmin = im.min()
   clipmax = im.max()
