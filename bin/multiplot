@@ -18,6 +18,7 @@ General-purpose plotting program for seismic images.
 '''
 
 defaulttype = '.sgy'
+defaultfile = '.plotdefaults'
 
 # ------------------------------------------------------------------------
 # Functions
@@ -39,8 +40,6 @@ read_mapping = {
 	'.rsf': read_rsf,
 	'.sgy': read_sgy,
 }
-
-defaultfile = '.plotdefaults'
 
 # ------------------------------------------------------------------------
 # Parameter parsing
