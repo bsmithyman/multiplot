@@ -102,13 +102,16 @@ parser.add_option('-t', '--title', action='store', dest='title',
 
 if (os.path.isfile(defaultfile)):
   with open(defaultfile, 'r') as fp:
-    optdict = dict(line.strip().split(None, 1) for line in fp if len(line.strip().split()) == 2)
+    optdict = dict(line.strip().split(None, 1) for line in fp if len(line.strip().split()) >= 2)
+    print optdict
 
   optdefaults.update(optdict)
 
 parser.set_defaults(**optdefaults)
 
 (options, args) = parser.parse_args()
+
+print options.cblabel
 
 if (len(args) == 0):
   parser.error('Please specify an input filename!')
