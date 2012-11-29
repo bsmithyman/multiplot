@@ -101,10 +101,8 @@ parser.add_option('-t', '--title', action='store', dest='title',
 		help='title for plot [\'%default\']')
 
 if (os.path.isfile(defaultfile)):
-  #with open(defaultfile, 'r') as fp:
-  fp = open(defaultfile, 'r')
-  optdict = dict(line.strip().split(None, 1) for line in fp if len(line.strip().split()) >= 2)
-  fp.close()
+  with open(defaultfile, 'r') as fp:
+    optdict = dict(line.strip().split(None, 1) for line in fp if len(line.strip().split()) >= 2)
 
   optdefaults.update(optdict)
 
