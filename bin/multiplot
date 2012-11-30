@@ -110,8 +110,6 @@ parser.set_defaults(**optdefaults)
 
 (options, args) = parser.parse_args()
 
-print options.cblabel
-
 if (len(args) == 0):
   parser.error('Please specify an input filename!')
 
