@@ -36,6 +36,7 @@ optdefaults = {
 			'title': 	'',
 			'type':		'image',
 			'clevels':	10,
+			'ccolour':	None,
 }
 
 # ------------------------------------------------------------------------
@@ -64,6 +65,17 @@ def read_rsf (infile):
 
   return None
 
+def combined_plot (*args, **kwargs):
+
+  contour_kwargs = kwargs.copy()
+  for item in ['cmap', 'vmin', 'vmax']:
+    del contour_kwargs[item]
+
+  if (options.ccolour):
+    contour_kwargs['colors'] = options.ccolour
+
+  plt.contour(*args, **contour_kwargs)
+  plt.imshow(args[0], **kwargs)
 
 read_mapping = {
 	'.su': read_su,
@@ -74,6 +86,7 @@ read_mapping = {
 plotfunc_mapping = {
 	'image': plt.imshow,
 	'contour': plt.contour,
+	'both': combined_plot,
 }
 
 # ------------------------------------------------------------------------
@@ -126,6 +139,9 @@ parser.add_option('-y', '--type', action='store', dest='type',
 parser.add_option('-l', '--clevels', action='store', dest='clevels',
 		help='number of contours for contour plot [%default]')
 
+parser.add_option('-u', '--ccolour', action='store', dest='ccolour',
+		help='fixed colour for contours [%default]')
+
 # Open settings from default settings file and update baked-in defaults
 if (os.path.isfile(defaultfile)):
   with open(defaultfile, 'r') as fp:
@@ -141,7 +157,9 @@ parser.set_defaults(**optdefaults)
 # ------------------------------------------------------------------------
 # Main Program
 
-plotopts = {}
+plotopts = {
+	'origin': 'upper',
+}
 
 # Check for at least one argument and set input file
 if (len(args) == 0):
@@ -195,7 +213,7 @@ else:
   plotopts['extent'] = [float(item) for item in options.extent.split(',')]
 
 # Check for plot type
-if (options.type in ['image','contour']):
+if (options.type in plotfunc_mapping):
   plotfunc = plotfunc_mapping[options.type]
 else:
   plotfunc = plotfunc_mapping[optdefaults['type']]
@@ -203,6 +221,8 @@ else:
 numcontours = int(options.clevels)
 if (options.type == 'contour'):
   plotargs = [im.T, numcontours]
+elif (options.type == 'both'):
+  plotargs = [im.T, numcontours] 
 else:
   plotargs = [im.T]
 
@@ -230,8 +250,11 @@ if (unicode(options.fontsize).isnumeric()):
 plotopts['aspect'] = options.ratio
 
 fig = plt.figure()
+ax = plt.gca()
 
 plotfunc(*plotargs, **plotopts)
+if (not ax.yaxis_inverted()):
+  ax.invert_yaxis()
 
 plt.xlabel(options.xlabel)
 plt.ylabel(options.zlabel)
