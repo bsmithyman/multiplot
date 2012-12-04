@@ -35,7 +35,7 @@ optdefaults = {
 			'cblabel': 	'',
 			'title': 	'',
 			'type':		'image',
-			'clevels':	10,
+			'clevels':	5,
 			'ccolour':	None,
 }
 
@@ -65,24 +65,39 @@ def read_rsf (infile):
 
   return None
 
-def combined_plot (*args, **kwargs):
+def modify_contour_args (thekwargs):
+  '''
+  Modifies the plotting options for a contour plot.
+  '''
 
-  contour_kwargs = kwargs.copy()
-  for item in ['cmap', 'vmin', 'vmax']:
-    del contour_kwargs[item]
+  contour_kwargs = thekwargs.copy()
 
   if (options.ccolour):
     contour_kwargs['colors'] = options.ccolour
 
+  for item in ['cmap', 'vmin', 'vmax']:
+    del contour_kwargs[item]
+
+  return contour_kwargs
+
+def combined_plot (*args, **kwargs):
+  '''
+  Generates an image plot with contours overlaid.
+  '''
+
+  contour_kwargs = modify_contour_args(kwargs)
+
   plt.contour(*args, **contour_kwargs)
   plt.imshow(args[0], **kwargs)
 
+# Dictionary to map file extensions to input filters
 read_mapping = {
 	'.su': read_su,
 	'.rsf': read_rsf,
 	'.sgy': read_sgy,
 }
 
+# Dictionary to map plot types to functions
 plotfunc_mapping = {
 	'image': plt.imshow,
 	'contour': plt.contour,
@@ -140,7 +155,7 @@ parser.add_option('-l', '--clevels', action='store', dest='clevels',
 		help='number of contours for contour plot [%default]')
 
 parser.add_option('-u', '--ccolour', action='store', dest='ccolour',
-		help='fixed colour for contours [%default]')
+		help='fixed colour for contours; you may use a letter code (matplotlib), greyscale level 0 < u < 1, or hex (HTML) colour code [%default]')
 
 # Open settings from default settings file and update baked-in defaults
 if (os.path.isfile(defaultfile)):
@@ -218,14 +233,6 @@ if (options.type in plotfunc_mapping):
 else:
   plotfunc = plotfunc_mapping[optdefaults['type']]
 
-numcontours = int(options.clevels)
-if (options.type == 'contour'):
-  plotargs = [im.T, numcontours]
-elif (options.type == 'both'):
-  plotargs = [im.T, numcontours] 
-else:
-  plotargs = [im.T]
-
 # Check for explicit colour bar options
 if (options.bar in ['vertical','horizontal']):
   plotbar = True
@@ -249,17 +256,34 @@ if (unicode(options.fontsize).isnumeric()):
 
 plotopts['aspect'] = options.ratio
 
+# Do various different things depending on the type of plot
+numcontours = int(options.clevels)
+if (options.type == 'contour'):
+  plotargs = [im.T, numcontours]
+  if (options.ccolour):
+    plotopts = modify_contour_args(plotopts)
+elif (options.type == 'both'):
+  plotargs = [im.T, numcontours] 
+else:
+  plotargs = [im.T]
+
+# Create the figure and axes
 fig = plt.figure()
 ax = plt.gca()
 
+# Plot (somehow; could be a composite plot)
 plotfunc(*plotargs, **plotopts)
+
+# Check to see if the axis has been inverted yet
 if (not ax.yaxis_inverted()):
   ax.invert_yaxis()
 
+# Label plot
 plt.xlabel(options.xlabel)
 plt.ylabel(options.zlabel)
 plt.title(options.title)
 
+# Possibly generate a colour bar and label it
 if (plotbar):
   cb = plt.colorbar(orientation=barori)
   cb.set_label(options.cblabel)
