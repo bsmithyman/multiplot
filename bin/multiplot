@@ -6,6 +6,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import pygeo.segyread as segyread
+import pygeo.rsfread as rsfread
 # import rsf.input
 
 # ------------------------------------------------------------------------
@@ -33,20 +34,34 @@ optdefaults = {
 			'zlabel': 	'',
 			'cblabel': 	'',
 			'title': 	'',
+			'type':		'image',
+			'clevels':	10,
 }
 
 # ------------------------------------------------------------------------
 # Functions
 
 def read_su (infile):
+  '''
+  Helper function to read Seismic Unix files.
+  '''
+
   sf = segyread.SEGYFile(infile, isSU=True)
   return sf[:]
 
 def read_sgy (infile):
+  '''
+  Helper function to read SEG-Y files.
+  '''
+
   sf = segyread.SEGYFile(infile)
   return sf[:]
 
 def read_rsf (infile):
+  '''
+  Helper function to read RSF files.
+  '''
+
   return None
 
 
@@ -54,6 +69,11 @@ read_mapping = {
 	'.su': read_su,
 	'.rsf': read_rsf,
 	'.sgy': read_sgy,
+}
+
+plotfunc_mapping = {
+	'image': plt.imshow,
+	'contour': plt.contour,
 }
 
 # ------------------------------------------------------------------------
@@ -100,16 +120,30 @@ parser.add_option('-k', '--cblabel', action='store', dest='cblabel',
 parser.add_option('-t', '--title', action='store', dest='title',
 		help='title for plot [\'%default\']')
 
+parser.add_option('-y', '--type', action='store', dest='type',
+		help='type of plot [%default]')
+
+parser.add_option('-l', '--clevels', action='store', dest='clevels',
+		help='number of contours for contour plot [%default]')
+
+# Open settings from default settings file and update baked-in defaults
 if (os.path.isfile(defaultfile)):
   with open(defaultfile, 'r') as fp:
     optdict = dict(line.strip().split(None, 1) for line in fp if len(line.strip().split()) >= 2)
 
   optdefaults.update(optdict)
 
+# Set defaults for OptionParser and parse the arguments
 parser.set_defaults(**optdefaults)
 
 (options, args) = parser.parse_args()
 
+# ------------------------------------------------------------------------
+# Main Program
+
+plotopts = {}
+
+# Check for at least one argument and set input file
 if (len(args) == 0):
   parser.error('Please specify an input filename!')
 
@@ -118,40 +152,66 @@ infile = args[0]
 if (not os.path.isfile(infile)):
   parser.error('File \'%s\' does not exist!'%(infile,))
 
+# Determine extension (for input format detection)
 extension = os.path.splitext(infile)[1]
 
+# Attempt to use a specific filter based on the extension
 try:
   im = read_mapping[extension](infile)
+
+# Fall back to the default input filter
 except KeyError:
   im = read_mapping[defaulttype](infile)
 
+# Test to see if specified colour map exists
 try:
-  comap = cm.__dict__[options.cmap]
+  plotopts['cmap'] = cm.__dict__[options.cmap]
 except KeyError:
   parser.errro('Colour map \'%s\' does not exist!'%(options.cmap,))
 
+# Handle clipping (default to shrink-wrap around image bounds)
 if (options.clip is None):
-  clipmin = im.min()
-  clipmax = im.max()
+  plotopts['vmin'] = im.min()
+  plotopts['vmax'] = im.max()
 
+# ... otherwise consider the number of arguments
 else:
   clipopts = options.clip.split(',')
+  
+  # two arguments specify minimum and maximum
   if (len(clipopts) == 2):
-    clipmin = float(clipopts[0])
-    clipmax = float(clipopts[1])
+    plotopts['vmin'] = float(clipopts[0])
+    plotopts['vmax'] = float(clipopts[1])
+  # one argument specifies equal +/- bounds
   else:
-    clipmax = float(clipopts[0])
-    clipmin = -clipmax
+    plotopts['vmax'] = float(clipopts[0])
+    plotopts['vmin'] = -plotopts['vmax']
 
+# Check to see if extent is specified; if so, use it, otherwise reproduce
+# matplotlib defaults
 if (options.extent is None):
-  axisext = [-0.5, im.shape[0] - 0.5, im.shape[1] - 0.5, -0.5]
+  plotopts['extent'] = [-0.5, im.shape[0] - 0.5, im.shape[1] - 0.5, -0.5]
 else:
-  axisext = [float(item) for item in options.extent.split(',')]
+  plotopts['extent'] = [float(item) for item in options.extent.split(',')]
 
+# Check for plot type
+if (options.type in ['image','contour']):
+  plotfunc = plotfunc_mapping[options.type]
+else:
+  plotfunc = plotfunc_mapping[optdefaults['type']]
+
+numcontours = int(options.clevels)
+if (options.type == 'contour'):
+  plotargs = [im.T, numcontours]
+else:
+  plotargs = [im.T]
+
+# Check for explicit colour bar options
 if (options.bar in ['vertical','horizontal']):
   plotbar = True
   barori = options.bar
 
+# ... or their short forms
 elif (options.bar.lower() in ['h','v']):
   plotbar = True
   if (options.bar.lower() == 'h'):
@@ -159,15 +219,19 @@ elif (options.bar.lower() in ['h','v']):
   else:
     barori = 'vertical'
     
+# and otherwise disable
 else:
   plotbar = False
 
+# Set font size for plot labels
 if (unicode(options.fontsize).isnumeric()):
   matplotlib.rcParams.update({'font.size': int(options.fontsize)})
 
+plotopts['aspect'] = options.ratio
+
 fig = plt.figure()
 
-plt.imshow(im.T, aspect=options.ratio, cmap=comap, vmin=clipmin, vmax=clipmax, extent=axisext)
+plotfunc(*plotargs, **plotopts)
 
 plt.xlabel(options.xlabel)
 plt.ylabel(options.zlabel)
