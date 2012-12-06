@@ -21,6 +21,8 @@ General-purpose plotting program for seismic images.
 defaulttype = '.sgy'
 defaultfile = '.plotdefaults'
 
+maxsize = 104857600
+
 # Option defaults
 optdefaults = {
 			'verbose':	 False,
@@ -63,7 +65,7 @@ def read_rsf (infile):
   Helper function to read RSF files.
   '''
 
-  return None
+  return rsfread.RSFFile(infile)
 
 def modify_contour_args (thekwargs):
   '''
@@ -190,6 +192,9 @@ extension = os.path.splitext(infile)[1]
 
 # Attempt to use a specific filter based on the extension
 try:
+  if (os.path.getsize(infile) > maxsize):
+    parser.error('File exceeds maximum size!')
+
   im = read_mapping[extension](infile)
 
 # Fall back to the default input filter
