@@ -175,7 +175,7 @@ parser.set_defaults(**optdefaults)
 # Main Program
 
 plotopts = {
-	'origin': 'upper',
+	'origin': 'lower',
 }
 
 # Check for at least one argument and set input file
