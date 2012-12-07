@@ -228,7 +228,7 @@ else:
 # Check to see if extent is specified; if so, use it, otherwise reproduce
 # matplotlib defaults
 if (options.extent is None):
-  plotopts['extent'] = [-0.5, im.shape[0] - 0.5, im.shape[1] - 0.5, -0.5]
+  plotopts['extent'] = [-0.5, im.shape[0] - 0.5, -0.5, im.shape[1] - 0.5]
 else:
   plotopts['extent'] = [float(item) for item in options.extent.split(',')]
 
