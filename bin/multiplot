@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import pygeo.segyread as segyread
 import pygeo.rsfread as rsfread
-# import rsf.input
+import pygeo.fastio as fastio
 
 # ------------------------------------------------------------------------
 # Settings
@@ -67,6 +67,20 @@ def read_rsf (infile):
 
   return rsfread.RSFFile(infile)
 
+def read_fast (infile):
+  '''
+  Helper function to read FAST files.
+  '''
+
+  dims = fastio.getParams()['dims']
+  dims2d = (dims[0], dims[2])
+
+  if (dims[1] != 1):
+    print('FAST plotting only works on slices! Assuming 2D with ({},1,{})'.format(dims[0], dims[2]))
+    dims = (dims[0],1,dims[2])
+
+  return fastio.readfast(infile, dims).reshape(dims2d)
+
 def modify_contour_args (thekwargs):
   '''
   Modifies the plotting options for a contour plot.
@@ -94,9 +108,10 @@ def combined_plot (*args, **kwargs):
 
 # Dictionary to map file extensions to input filters
 read_mapping = {
-	'.su': read_su,
-	'.rsf': read_rsf,
-	'.sgy': read_sgy,
+	'.su':		read_su,
+	'.rsf':		read_rsf,
+	'.sgy':		read_sgy,
+	'.fast':	read_fast,
 }
 
 # Dictionary to map plot types to functions
